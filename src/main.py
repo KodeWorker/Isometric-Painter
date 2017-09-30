@@ -17,7 +17,7 @@ class IsometricPainter(QMainWindow):
         
     def initUI(self):
         
-        self.setWindowTitle('Isometric Painter')
+        self.setWindowTitle('Isometric-Painter')
         
         self.resize(self.windowWidth, self.windowHeight)
         center_point = QDesktopWidget().availableGeometry().center()
@@ -29,8 +29,7 @@ class IsometricPainter(QMainWindow):
         self.workspace = Workspace(self)
         self.setCentralWidget(self.workspace)
         
-        self.initStatusbar()        
-#        self.showMaximized()        
+        self.initStatusbar()      
         self.show()
 
     def initMenu(self):
@@ -208,7 +207,7 @@ class Viewer(QWidget):
         pass
 
 if __name__ == '__main__':
-    
+
     app = QApplication(sys.argv)
     ip = IsometricPainter()
     sys.exit(app.exec_())
