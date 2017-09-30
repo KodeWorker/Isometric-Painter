@@ -20,5 +20,5 @@ if __name__ == '__main__':
     # workaround for error: This application failed to start because it could not find or load the Qt platform plugin "windows" in "".
     copytree(os.path.join(standalone_dir, 'PyQt5', 'Qt', 'plugins', 'platforms'), os.path.join(standalone_dir, 'platforms'))
     
-    # open the built exicutable
+    # open the built executable
     os.system('start /d %s %s.exe' %(standalone_dir, project_name))
