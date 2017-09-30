@@ -5,8 +5,8 @@ from PyQt5.QtWidgets import QFrame
 from PyQt5.QtWidgets import QHBoxLayout, QSplitter
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIcon
-
 from PyQt5.QtWidgets import QToolBar
+from PyQt5.QtWidgets import QWidget
 
 class IsometricPainter(QMainWindow):
     
@@ -119,7 +119,7 @@ class IsometricPainter(QMainWindow):
         paintBucketTool = QAction(QIcon('paint_bucket.png'), 'Paint Bucket', self)
         
         toolbar = QToolBar('Paint Tool')
-        self.addToolBar(Qt.LeftToolBarArea , toolbar)
+        self.addToolBar(Qt.BottomToolBarArea , toolbar)
                       
         #######################################################################
         
@@ -140,34 +140,73 @@ class IsometricPainter(QMainWindow):
         
 class Workspace(QFrame):
     
-    def __init__(self, parent):
-        super().__init__(parent)
-        
-        self.initWorkspace(parent)
+    def __init__(self, parent=None):
+        super().__init__(parent)        
+        self.initWorkspace()
     
-    def initWorkspace(self, parent):
+    def initWorkspace(self):
         hbox = QHBoxLayout(self)
 
+        # Canvas
         left = QFrame(self)
         left.setFrameShape(QFrame.StyledPanel)
- 
+        self.canvas = Canvas(left)
+                
+        # Toolset
         rightTop = QFrame(self)
         rightTop.setFrameShape(QFrame.StyledPanel)
-
+        self.toolset = Toolset(rightTop)
+        
+        # Viewer
         rightBottom = QFrame(self)
         rightBottom.setFrameShape(QFrame.StyledPanel)
+        self.viewr = Viewer(rightBottom)
 
+        #######################################################################
+        
+        # Workspace Item Structure
         splitter1 = QSplitter(Qt.Vertical)
         splitter1.addWidget(rightTop)
         splitter1.addWidget(rightBottom)
+        splitter1.setSizes([self.parentWidget().windowHeight, self.parentWidget().windowHeight])
         
         splitter2 = QSplitter(Qt.Horizontal)
         splitter2.addWidget(left)
         splitter2.addWidget(splitter1)
+        splitter2.setSizes([self.parentWidget().windowHeight, self.parentWidget().windowWidth - self.parentWidget().windowHeight])
         
         hbox.addWidget(splitter2)
         self.setLayout(hbox)
+
+        #######################################################################
+        
+class Canvas(QWidget):
     
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.initCanvas()
+    
+    def initCanvas(self):
+        pass
+
+class Toolset(QWidget):
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.initToolset()
+    
+    def initToolset(self):
+        pass
+
+class Viewer(QWidget):
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.initViewer()
+    
+    def initViewer(self):
+        pass
+
 if __name__ == '__main__':
     
     app = QApplication(sys.argv)
