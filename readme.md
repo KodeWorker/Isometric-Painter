@@ -8,12 +8,10 @@ A Python-based painter for 2.5d isometric tiles.
 3. support static and dynamic (animation) 
 4. support 3d collision
 
-# Code-Train Goals ( 2017/09/25 - 2017/10/02 )
-- 2017/09/29 - project initiation
-- 2017/09/30 - basic framework and code freeze
-
 # Done Features
 
-# Development Log
+# Dev-Log
 - 2017/09/29 - project initiation
+- 2017/09/30 - basic framework and code freeze
+- 2017/10/12 - basic 3D axis grid system
 

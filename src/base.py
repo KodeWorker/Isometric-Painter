@@ -1,6 +1,6 @@
+from workspace.desk import Desk
 from PyQt5.QtWidgets import (QMainWindow, QDesktopWidget, QAction, QMenu,
-                             QToolBar, QFrame, QSplitter, QHBoxLayout, QWidget,
-                             QTextEdit)
+                             QToolBar)
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import Qt
 
@@ -21,7 +21,7 @@ class BaseApplication(QMainWindow):
         self.initMenu()
         self.initToolbar()
         
-        self.workspace = Workspace(self)
+        self.workspace = Desk(self)
         self.setCentralWidget(self.workspace)
         
         self.initStatusbar()      
@@ -113,7 +113,7 @@ class BaseApplication(QMainWindow):
         paintBucketTool = QAction(QIcon('paint_bucket.png'), 'Paint Bucket', self)
         
         toolbar = QToolBar('Paint Tool')
-        self.addToolBar(Qt.BottomToolBarArea , toolbar)
+        self.addToolBar(Qt.LeftToolBarArea , toolbar)
                       
         #######################################################################
         
@@ -131,75 +131,3 @@ class BaseApplication(QMainWindow):
     def initStatusbar(self):
         
         self.statusbar = self.statusBar()
-        
-class Workspace(QFrame):
-    
-    def __init__(self, parent=None):
-        super().__init__(parent)        
-        self.initWorkspace()
-    
-    def initWorkspace(self):
-        hbox = QHBoxLayout(self)
-
-        # Canvas
-        left = QFrame(self)
-        left.setFrameShape(QFrame.StyledPanel)
-                        
-        # Toolset
-        rightTop = QFrame(self)
-        rightTop.setFrameShape(QFrame.StyledPanel)
-                
-        # Viewer
-        rightBottom = QFrame(self)
-        rightBottom.setFrameShape(QFrame.StyledPanel)
-        
-        #######################################################################
-        
-        # Workspace Item Structure
-        splitter1 = QSplitter(Qt.Vertical)
-        splitter1.addWidget(rightTop)
-        splitter1.addWidget(rightBottom)
-        # set splitter ratio
-        splitter1.setSizes([self.parentWidget().windowHeight, self.parentWidget().windowHeight])
-        
-        splitter2 = QSplitter(Qt.Horizontal)
-        splitter2.addWidget(left)
-        splitter2.addWidget(splitter1)
-        # set splitter ratio
-        splitter2.setSizes([self.parentWidget().windowHeight, self.parentWidget().windowWidth - self.parentWidget().windowHeight])
-        
-        hbox.addWidget(splitter2)
-        self.setLayout(hbox)
-
-        #######################################################################
-        
-        self.canvas = Canvas(left)
-        self.toolset = Toolset(rightTop)
-        self.viewr = Viewer(rightBottom)
-        
-class Canvas(QWidget):
-    
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.initCanvas()
-    
-    def initCanvas(self):
-        pass
-        
-class Toolset(QWidget):
-    
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.initToolset()
-    
-    def initToolset(self):
-        pass
-
-class Viewer(QWidget):
-    
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.initViewer()
-    
-    def initViewer(self):
-        pass

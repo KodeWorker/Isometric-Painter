@@ -1,6 +1,6 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QDesktopWidget
-from base import BaseApplication, Workspace
+from PyQt5.QtWidgets import (QApplication, QDesktopWidget)
+from base import (BaseApplication, Desk)
 
 class IsometricPainter(BaseApplication):
 
@@ -18,8 +18,7 @@ class IsometricPainter(BaseApplication):
         self.initMenu()
         self.initToolbar()
 
-        self.workspace = Workspace(self)
-        self.setCentralWidget(self.workspace)
+        self.desk = Desk(self)
 
         self.initStatusbar()
         self.show()
