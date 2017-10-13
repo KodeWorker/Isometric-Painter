@@ -45,9 +45,9 @@ class PaintArea(QWidget):
         Vector2D(self.geometry().width(), self.geometry().height()).norm()
         # Grid parameters
         self.grid_line_width = 1
-        self.grid_max = {'x':2, 'y':1, 'z':2}
-        self.grid_min = {'x':0, 'y':-1, 'z':0}
-        self.init_grid_length = self.grid_length = 100
+        self.grid_max = {'x':32, 'y':32, 'z':32}
+        self.grid_min = {'x':0, 'y':0, 'z':0}
+        self.init_grid_length = self.grid_length = 10
         self.init_grid_mode = self.grid_mode = 1
 
         #======================================================================
@@ -107,9 +107,6 @@ class PaintArea(QWidget):
                           self.geometry().center().y()) + self.offset
 
         self.drawAxis()
-        self.mesh[0]['xy'][1,1] = (100,100,100,100)
-        self.mesh[1]['yz'][1,0] = (100,100,100,255)
-
         self.drawMesh()
 
         self.qPainter.end()
