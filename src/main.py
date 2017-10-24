@@ -9,7 +9,7 @@ class IsometricPainter(BaseApplication):
 
     def initUI(self):
 
-        self.setWindowTitle('Isometric-Painter')
+        self.setWindowTitle('Retro-Painter')
 
         self.resize(self.windowWidth, self.windowHeight)
         center_point = QDesktopWidget().availableGeometry().center()
@@ -19,9 +19,11 @@ class IsometricPainter(BaseApplication):
         self.initToolbar()
 
         self.desk = Desk(self)
-
+        
         self.initStatusbar()
+                
         self.show()
+        
 
 if __name__ == '__main__':
 

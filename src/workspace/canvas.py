@@ -1,10 +1,14 @@
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
                              QTabWidget, QPushButton)
-from PyQt5.QtGui import (QColor, QPainter, QPen, QPolygonF)
-from PyQt5.QtCore import Qt, QPointF
-from matrix.vector import Vector2D, Vector3D
-from matrix.transform import PerspectiveProjection
+from PyQt5.QtGui import (QColor, QPainter, QPen, QPolygonF, QPalette, QIcon)
+from PyQt5.QtCore import (Qt, QPointF)
+from system.matrix.vector import (Vector2D, Vector3D)
+from system.matrix.transform import PerspectiveProjection
 from system.storage import InitMesh
+
+from config.base import get_asset_dir
+from config.canvas import (get_axis_line_width, get_grid_line_width,
+                           get_grid_length, get_grid_mode)
 
 class Canvas(QWidget):
 
@@ -18,43 +22,48 @@ class Canvas(QWidget):
 
         self.tabs = QTabWidget()
         self.tabs.setTabsClosable(True)
-        tab1 = PaintArea()
-        tab2 = PaintArea()
-        self.tabs.addTab(tab1, 'tab1')
-        self.tabs.addTab(tab2, 'tab2')
+        
+        self.newPaintArea()
 
         vbox.addWidget(self.tabs)
         self.setLayout(vbox)
-
+        
         self.tabs.tabCloseRequested.connect(self.removeTab)
 
     def removeTab(self, index):
         self.tabs.removeTab(index)
+    
+    def newPaintArea(self, file_name=None):
+        if file_name == None:
+            file_name = 'temp'
+        paintArea = PaintArea()
+        self.tabs.addTab(paintArea, file_name)
 
 class PaintArea(QWidget):
 
-    def __init__(self, parent=None):
+    def __init__(self, x=8, y=8, z=8, parent=None):
         super().__init__(parent)
-        self.initCanvas()
+        self.initPaintArea(x, y, z)
 
-    def initCanvas(self):
+    def initPaintArea(self, x, y, z):
 
         # Axis parameters
-        self.axis_line_width = 2
+        self.axis_line_width = get_axis_line_width()
         self.init_axis_length = self.axis_length = \
         Vector2D(self.geometry().width(), self.geometry().height()).norm()
         # Grid parameters
-        self.grid_line_width = 1
-        self.grid_max = {'x':32, 'y':32, 'z':32}
+        self.grid_line_width = get_grid_line_width()
+        self.grid_max = {'x':x, 'y':y, 'z':z}
         self.grid_min = {'x':0, 'y':0, 'z':0}
-        self.init_grid_length = self.grid_length = 10
-        self.init_grid_mode = self.grid_mode = 1
+        self.init_grid_length = self.grid_length = get_grid_length()
+        self.init_grid_mode = self.grid_mode = get_grid_mode()
 
         #======================================================================
         # Pixel storage
         #======================================================================
 
         self.mesh = InitMesh(self.grid_min, self.grid_max)
+        
         #======================================================================
         # 3D perspective projection
         #======================================================================
@@ -65,229 +74,192 @@ class PaintArea(QWidget):
         self.v0 = Vector3D(0, 0, 0)
         gamma, beta, alpha = 45, 0, 60
         self.R = PerspectiveProjection(gamma, beta, alpha)
+        
+        x_unit = Vector3D(1, 0, 0)
+        y_unit = Vector3D(0, 1, 0)
+        z_unit = Vector3D(0, 0, 1)
 
+        self.x_u = x_unit.project(self.R, self.v0)
+        self.y_u = y_unit.project(self.R, self.v0)
+        self.z_u = z_unit.project(self.R, self.v0)
+        
         #======================================================================
         # Buttons
         #======================================================================
-        reset_btn = QPushButton("reset", self)
-        reset_btn.clicked[bool].connect(self.resetGridPos)
+        
+        reset_btn = QPushButton(QIcon(get_asset_dir('reset.png')), '', self)
+        reset_btn.clicked[bool].connect(self.resetBtn)
 
-        self.mode_btn = QPushButton('%d' %self.grid_mode, self)
+        self.mode_btn = QPushButton(QIcon(get_asset_dir('mode%d.png' %self.grid_mode)), '', self)
         self.mode_btn.setCheckable(True)
-        self.mode_btn.clicked[bool].connect(self.setGridMode)
-
+        self.mode_btn.clicked[bool].connect(self.modeBtn)
+        
+        self.grid_btn = QPushButton(QIcon(get_asset_dir('grid_on.png')), '', self)
+        self.showGrid = True
+        self.grid_btn.clicked[bool].connect(self.gridBtn)
+        
+        self.axis_btn = QPushButton(QIcon(get_asset_dir('axis_on.png')), '', self)
+        self.showAxis = True
+        self.axis_btn.clicked[bool].connect(self.axisBtn)
+        
         hbox = QHBoxLayout()
-        hbox.addStretch()
+        hbox.addWidget(self.axis_btn)
+        hbox.addWidget(self.grid_btn)
+        hbox.addStretch()        
         hbox.addWidget(self.mode_btn)
         hbox.addWidget(reset_btn)
         vbox = QVBoxLayout()
         vbox.addStretch()
         vbox.addLayout(hbox)
         self.setLayout(vbox)
-
+        
+        #======================================================================
+        # Draw background
+        #======================================================================
+        
+        qPalette = QPalette()
+        qPalette.setColor(QPalette.Background, Qt.black)
+        self.setAutoFillBackground(True)
+        self.setPalette(qPalette)
+        
+        #======================================================================
+        # Draw test cells
+        #======================================================================
+        self.mesh[0]['xy'][0,0] = (100,100,100,100)
+        self.mesh[0]['yz'][0,0] = (100,100,100,100)
+        self.mesh[0]['xz'][0,0] = (100,100,100,100)
+        
+        self.mesh[1]['xy'][0,0] = (255,000,000,100)
+        self.mesh[1]['yz'][0,0] = (000,255,000,100)
+        self.mesh[1]['xz'][0,0] = (000,000,255,100)
+        
     def paintEvent(self, event):
         self.qPainter = QPainter()
         self.qPainter.begin(self)
 
-        #======================================================================
-        # Draw background
-        #======================================================================
-
-        # Black background
-        self.qPainter.setPen(QColor(0, 0, 0))
-        self.qPainter.setBrush(QColor(0, 0, 0))
-        self.qPainter.drawRect(self.geometry())
-
-        #======================================================================
-        # Draw 3D object
-        #======================================================================
-
-        # Update origin
+        # Update origin and axis length
         self.origin = Vector2D(self.geometry().center().x(),
                           self.geometry().center().y()) + self.offset
-
-        self.drawAxis()
+        if self.showAxis:
+            self.axis_length = \
+            Vector2D(self.geometry().width(), self.geometry().height()).norm()
+            self.drawAxis()            
         self.drawMesh()
-
+        
         self.qPainter.end()
 
     def drawAxis(self):
         #======================================================================
         # Draw axis
         #======================================================================
-
-        x_unit = Vector3D(1, 0, 0)
-        y_unit = Vector3D(0, 1, 0)
-        z_unit = Vector3D(0, 0, 1)
-
-        x = x_unit.project(self.R, self.v0)*self.axis_length
-        y = y_unit.project(self.R, self.v0)*self.axis_length
-        z = z_unit.project(self.R, self.v0)*self.axis_length
-
-        # Draw axis
         self.qPainter.setPen(QPen(Qt.blue, self.axis_line_width, Qt.DashLine))
         self.qPainter.drawLine(self.origin.x, self.origin.y,
-                    self.origin.x + x.x, self.origin.y + x.y)
+                    self.origin.x + self.x_u.x*self.axis_length,
+                    self.origin.y + self.x_u.y*self.axis_length)
         self.qPainter.setPen(QPen(Qt.red, self.axis_line_width, Qt.DashLine))
         self.qPainter.drawLine(self.origin.x, self.origin.y,
-                    self.origin.x + y.x, self.origin.y + y.y)
+                    self.origin.x + self.y_u.x*self.axis_length,
+                    self.origin.y + self.y_u.y*self.axis_length)
         self.qPainter.setPen(QPen(Qt.green, self.axis_line_width, Qt.DashLine))
         self.qPainter.drawLine(self.origin.x, self.origin.y,
-                    self.origin.x + z.x, self.origin.y + z.y)
-
+                    self.origin.x + self.z_u.x*self.axis_length,
+                    self.origin.y + self.z_u.y*self.axis_length)
 
     def drawMesh(self):
-
+        if not self.showGrid:
+            self.qPainter.setPen(QPen(QColor(0, 0, 0, 0), self.grid_line_width, Qt.DotLine))
         if self.grid_mode == 0:
             #==================================================================
             # Draw grid - mode 0
             #==================================================================
-            self.qPainter.setPen(QPen(Qt.gray, self.grid_line_width, Qt.DotLine))
+            if self.showGrid:
+                self.qPainter.setPen(QPen(Qt.gray, self.grid_line_width, Qt.DotLine))
             self.drawInnerMesh()
 
         elif self.grid_mode == 1:
             #==================================================================
             # Draw grid - mode 1
             #==================================================================
-            self.qPainter.setPen(QPen(Qt.gray, self.grid_line_width, Qt.DotLine))
+            if self.showGrid:
+                self.qPainter.setPen(QPen(Qt.gray, self.grid_line_width, Qt.DotLine))
             self.drawInnerMesh()
-            self.qPainter.setPen(QPen(Qt.white, self.grid_line_width, Qt.DotLine))
+            if self.showGrid:
+                self.qPainter.setPen(QPen(Qt.white, self.grid_line_width, Qt.DotLine))
             self.drawOuterMesh()
 
     def drawInnerMesh(self):
         inner_mode = 0
-        lim_dict = self.grid_min
-
-        for x in range(self.grid_min['x'], self.grid_max['x']+1):
-            for y in range(self.grid_min['y'], self.grid_max['y']+1):
-                p1 = Vector3D(x, y, self.grid_min['z'])
-
-                if self.grid_min['x'] >= 0:
-                    x_idx = x+self.grid_min['x']-1
-                else:
-                    x_idx = x+self.grid_min['x']
-                if self.grid_min['y'] >= 0:
-                    y_idx = y+self.grid_min['y']-1
-                else:
-                    y_idx = y+self.grid_min['y']
-                pixel = self.mesh[inner_mode]['xy'][x_idx, y_idx]
-
-                self.drawOneGrid(p1, lim_dict, pixel)
+        
+        # Draw X-Y grid plane
+        for x in range(self.grid_min['x'], self.grid_max['x']):
+            for y in range(self.grid_min['y'], self.grid_max['y']):
+                p = Vector3D(x, y, self.grid_min['z'])
+                color = self.mesh[inner_mode]['xy'][x-self.grid_min['x'], y-self.grid_min['y']]
+                self.drawOneGrid(p+Vector3D(1, 1, 0), self.grid_min, color)
+                
         # Draw Y-Z grid plane
-        for y in range(self.grid_min['y'], self.grid_max['y']+1):
-            for z in range(self.grid_min['z'], self.grid_max['z']+1):
-                p1 = Vector3D(self.grid_min['x'], y, z)
-
-                if self.grid_min['y'] >= 0:
-                    y_idx = y+self.grid_min['y']-1
-                else:
-                    y_idx = y+self.grid_min['y']
-                if self.grid_min['z'] >= 0:
-                    z_idx = z+self.grid_min['z']-1
-                else:
-                    z_idx = z+self.grid_min['z']
-                pixel = self.mesh[inner_mode]['yz'][y_idx, z_idx]
-
-                self.drawOneGrid(p1, lim_dict, pixel)
+        for y in range(self.grid_min['y'], self.grid_max['y']):
+            for z in range(self.grid_min['z'], self.grid_max['z']):
+                p = Vector3D(self.grid_min['x'], y, z)
+                color = self.mesh[inner_mode]['yz'][y-self.grid_min['y'], z-self.grid_min['z']]
+                self.drawOneGrid(p+Vector3D(0, 1, 1), self.grid_min, color)
+                
         # Draw X-Z grid plane
-        for x in range(self.grid_min['x'], self.grid_max['x']+1):
-            for z in range(self.grid_min['z'], self.grid_max['z']+1):
-                p1 = Vector3D(x, self.grid_min['y'], z)
-
-                if self.grid_min['x'] >= 0:
-                    x_idx = x+self.grid_min['x']-1
-                else:
-                    x_idx = x+self.grid_min['x']
-                if self.grid_min['z'] >= 0:
-                    z_idx = y+self.grid_min['z']-1
-                else:
-                    z_idx = y+self.grid_min['z']
-                pixel = self.mesh[inner_mode]['xz'][x_idx, z_idx]
-
-                self.drawOneGrid(p1, lim_dict, pixel)
+        for x in range(self.grid_min['x'], self.grid_max['x']):
+            for z in range(self.grid_min['z'], self.grid_max['z']):
+                p = Vector3D(x, self.grid_min['y'], z)
+                color = self.mesh[inner_mode]['xz'][x-self.grid_min['x'], z-self.grid_min['z']]
+                self.drawOneGrid(p+Vector3D(1, 0, 1), self.grid_min, color)
 
     def drawOuterMesh(self):
         outer_mode = 1
+        
         lim_dict = {'x':self.grid_min['x'],
                     'y':self.grid_min['y'],
                     'z':self.grid_max['z']}
 
-        for x in range(self.grid_min['x'], self.grid_max['x']+1):
-            for y in range(self.grid_min['y'], self.grid_max['y']+1):
-                p1 = Vector3D(x, y, self.grid_max['z'])
-
-                if self.grid_min['x'] >= 0:
-                    x_idx = x+self.grid_min['x']-1
-                else:
-                    x_idx = x+self.grid_min['x']
-                if self.grid_min['y'] >= 0:
-                    y_idx = y+self.grid_min['y']-1
-                else:
-                    y_idx = y+self.grid_min['y']
-                pixel = self.mesh[outer_mode]['xy'][x_idx, y_idx]
-
-                self.drawOneGrid(p1, lim_dict, pixel)
-
+        for x in range(self.grid_min['x'], self.grid_max['x']):
+            for y in range(self.grid_min['y'], self.grid_max['y']):
+                p = Vector3D(x, y, self.grid_max['z'])
+                color = self.mesh[outer_mode]['xy'][x-self.grid_min['x'], y-self.grid_min['y']]
+                self.drawOneGrid(p+Vector3D(1, 1, 0), lim_dict, color)
+                
         # Draw Y-Z grid plane
         lim_dict = {'x':self.grid_max['x'],
                     'y':self.grid_min['y'],
                     'z':self.grid_min['z']}
 
-        for y in range(self.grid_min['y'], self.grid_max['y']+1):
-            for z in range(self.grid_min['z'], self.grid_max['z']+1):
-                p1 = Vector3D(self.grid_max['x'], y, z)
-
-                if self.grid_min['y'] >= 0:
-                    y_idx = y+self.grid_min['y']-1
-                else:
-                    y_idx = y+self.grid_min['y']
-                if self.grid_min['z'] >= 0:
-                    z_idx = z+self.grid_min['z']-1
-                else:
-                    z_idx = z+self.grid_min['z']
-                pixel = self.mesh[outer_mode]['yz'][y_idx, z_idx]
-
-                self.drawOneGrid(p1, lim_dict, pixel)
-
+        for y in range(self.grid_min['y'], self.grid_max['y']):
+            for z in range(self.grid_min['z'], self.grid_max['z']):
+                p = Vector3D(self.grid_max['x'], y, z)
+                color = self.mesh[outer_mode]['yz'][y-self.grid_min['y'], z-self.grid_min['z']]
+                self.drawOneGrid(p+Vector3D(0, 1, 1), lim_dict, color)
+                
         # Draw X-Z grid plane
         lim_dict = {'x':self.grid_min['x'],
                     'y':self.grid_max['y'],
                     'z':self.grid_min['z']}
 
-        for x in range(self.grid_min['x'], self.grid_max['x']+1):
-            for z in range(self.grid_min['z'], self.grid_max['z']+1):
-                p1 = Vector3D(x, self.grid_max['y'], z)
-
-                if self.grid_min['x'] >= 0:
-                    x_idx = x+self.grid_min['x']-1
-                else:
-                    x_idx = x+self.grid_min['x']
-                if self.grid_min['z'] >= 0:
-                    z_idx = y+self.grid_min['z']-1
-                else:
-                    z_idx = y+self.grid_min['z']
-                pixel = self.mesh[outer_mode]['xz'][x_idx, z_idx]
-
-                self.drawOneGrid(p1, lim_dict, pixel)
-
-    def drawOneGrid(self, p, lim_dict, pixel):
+        for x in range(self.grid_min['x'], self.grid_max['x']):
+            for z in range(self.grid_min['z'], self.grid_max['z']):
+                p = Vector3D(x, self.grid_max['y'], z)
+                color = self.mesh[outer_mode]['xz'][x-self.grid_min['x'], z-self.grid_min['z']]
+                self.drawOneGrid(p+Vector3D(1, 0, 1), lim_dict, color)
+        
+    def drawOneGrid(self, p, lim_dict, color):
 
         p1 = Vector3D(p.x,                              max(p.y-1, lim_dict['y']),         max(p.z-1, lim_dict['z']))
         p2 = Vector3D(max(p.x-1, lim_dict['x']),        p.y,                               max(p.z-1, lim_dict['z']))
         p3 = Vector3D(max(p.x-1, lim_dict['x']),        max(p.y-1, lim_dict['y']),         p.z)
         p4 = Vector3D(max(p.x-1, lim_dict['x']),        max(p.y-1, lim_dict['y']),         max(p.z-1, lim_dict['z']))
+        
+        P = self.x_u*p.x*self.grid_length + self.y_u*p.y*self.grid_length + self.z_u*p.z*self.grid_length
+        P1 = self.x_u*p1.x*self.grid_length + self.y_u*p1.y*self.grid_length + self.z_u*p1.z*self.grid_length
+        P2 = self.x_u*p2.x*self.grid_length + self.y_u*p2.y*self.grid_length + self.z_u*p2.z*self.grid_length
+        P3 = self.x_u*p3.x*self.grid_length + self.y_u*p3.y*self.grid_length + self.z_u*p3.z*self.grid_length
+        P4 = self.x_u*p4.x*self.grid_length + self.y_u*p4.y*self.grid_length + self.z_u*p4.z*self.grid_length
 
-        P = p.project(self.R, self.v0)*self.grid_length
-        P1 = p1.project(self.R, self.v0)*self.grid_length
-        P2 = p2.project(self.R, self.v0)*self.grid_length
-        P3 = p3.project(self.R, self.v0)*self.grid_length
-        P4 = p4.project(self.R, self.v0)*self.grid_length
-
-        # Diagonal grid
-        if p.x != lim_dict['x']:
-            self.qPainter.drawLine(self.origin.x + P.x, self.origin.y + P.y,
-                        self.origin.x + P1.x, self.origin.y + P1.y)
-        else:
+        if p.x == lim_dict['x']:
             # Y-Z mesh
             polygon = QPolygonF()
             polygon.append(QPointF(self.origin.x, self.origin.y) + QPointF(P.x, P.y))
@@ -295,10 +267,7 @@ class PaintArea(QWidget):
             polygon.append(QPointF(self.origin.x, self.origin.y) + QPointF(P4.x, P4.y))
             polygon.append(QPointF(self.origin.x, self.origin.y) + QPointF(P3.x, P3.y))
 
-        if p.y != lim_dict['y']:
-            self.qPainter.drawLine(self.origin.x + P.x, self.origin.y + P.y,
-                        self.origin.x + P2.x, self.origin.y + P2.y)
-        else:
+        elif p.y == lim_dict['y']:
             # X-Z mesh
             polygon = QPolygonF()
             polygon.append(QPointF(self.origin.x, self.origin.y) + QPointF(P1.x, P1.y))
@@ -306,10 +275,7 @@ class PaintArea(QWidget):
             polygon.append(QPointF(self.origin.x, self.origin.y) + QPointF(P3.x, P3.y))
             polygon.append(QPointF(self.origin.x, self.origin.y) + QPointF(P4.x, P4.y))
 
-        if p.z != lim_dict['z']:
-            self.qPainter.drawLine(self.origin.x + P.x, self.origin.y + P.y,
-                        self.origin.x + P3.x, self.origin.y + P3.y)
-        else:
+        elif p.z == lim_dict['z']:
             # X-Y mesh
             polygon = QPolygonF()
             polygon.append(QPointF(self.origin.x, self.origin.y) + QPointF(P1.x, P1.y))
@@ -318,40 +284,46 @@ class PaintArea(QWidget):
             polygon.append(QPointF(self.origin.x, self.origin.y) + QPointF(P4.x, P4.y))
 
         # Paint the grid area
-        color = QColor(pixel[0], pixel[1], pixel[2], pixel[3])
-        #self.qPainter.setPen(color)
-        self.qPainter.setBrush(color)
+        qColor = QColor(color[0], color[1], color[2], color[3])
+        self.qPainter.setBrush(qColor)
         self.qPainter.drawPolygon(polygon)
-
-        # Horizontal and vertical grid
-        self.qPainter.drawLine(self.origin.x + P4.x, self.origin.y + P4.y,
-                        self.origin.x + P3.x, self.origin.y + P3.y)
-        self.qPainter.drawLine(self.origin.x + P4.x, self.origin.y + P4.y,
-                        self.origin.x + P2.x, self.origin.y + P2.y)
-        self.qPainter.drawLine(self.origin.x + P4.x, self.origin.y + P4.y,
-                        self.origin.x + P1.x, self.origin.y + P1.y)
-
 
     #==========================================================================
     # Button Events
     #==========================================================================
 
-    def setGridMode(self, pressed):
+    def modeBtn(self, pressed):
         self.grid_mode += 1
         self.grid_mode %= 2
-        self.mode_btn.setText('%d' %self.grid_mode)
+        self.mode_btn.setIcon(QIcon(get_asset_dir('mode%d.png' %self.grid_mode)))
         self.update()
 
-    def resetGridPos(self, pressed):
+    def resetBtn(self, pressed):
         # Reset configuration
         self.grid_length = self.init_grid_length
         self.grid_mode = self.init_grid_mode
         self.offset = Vector2D(0, 0)
         # Reset "mode" button
         self.mode_btn.setChecked(False)
-        self.mode_btn.setText('%d' %self.grid_mode)
+        self.mode_btn.setIcon(QIcon(get_asset_dir('mode%d.png' %self.grid_mode)))
         self.update()
-
+        
+    def gridBtn(self, pressed):
+        self.showGrid = not self.showGrid
+        if self.showGrid:
+            self.grid_btn.setIcon(QIcon(get_asset_dir('grid_on.png')))
+        else:
+            self.grid_btn.setIcon(QIcon(get_asset_dir('grid_off.png')))
+        self.update()
+    
+    def axisBtn(self, pressed):
+        self.showAxis = not self.showAxis
+        if self.showAxis:
+            self.axis_btn.setIcon(QIcon(get_asset_dir('axis_on.png')))
+        else:
+            self.axis_btn.setIcon(QIcon(get_asset_dir('axis_off.png')))
+        self.update()
+    
     #==========================================================================
     # Mouse Events
     #==========================================================================
@@ -363,7 +335,9 @@ class PaintArea(QWidget):
              - self.offset
 
     def mouseMoveEvent(self, event):
+        #======================================================================
         # Drag canvas while holding right mouse button on Canvas
+        #======================================================================
         if event.buttons() == Qt.RightButton:
             drag = Vector2D(event.pos().x(), event.pos().y()) - self.drag_start
             # Update axis length

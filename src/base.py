@@ -1,8 +1,9 @@
-from workspace.desk import Desk
 from PyQt5.QtWidgets import (QMainWindow, QDesktopWidget, QAction, QMenu,
                              QToolBar)
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import Qt
+from workspace.desk import Desk
+from config.base import get_asset_dir
 
 class BaseApplication(QMainWindow):
     def __init__(self):
@@ -106,11 +107,12 @@ class BaseApplication(QMainWindow):
     
     def initToolbar(self):
         
-        cursorTool = QAction(QIcon('cursor.png'), 'cursor', self)
-        penTool = QAction(QIcon('pen.png'), 'Pen', self)
-        eraserTool = QAction(QIcon('eraser.png'), 'Eraser', self)
-        lineTool = QAction(QIcon('line.png'), 'Line', self)
-        paintBucketTool = QAction(QIcon('paint_bucket.png'), 'Paint Bucket', self)
+        cursorTool = QAction(QIcon(get_asset_dir('cursor.png')), 'cursor', self)
+        penTool = QAction(QIcon(get_asset_dir('pen.png')), 'Pen', self)
+        eraserTool = QAction(QIcon(get_asset_dir('eraser.png')), 'Eraser', self)
+        lineTool = QAction(QIcon(get_asset_dir('line.png')), 'Line', self)
+        paintBucketTool = QAction(QIcon(get_asset_dir('paint_bucket.png')),
+                                  'Paint Bucket', self)
         
         toolbar = QToolBar('Paint Tool')
         self.addToolBar(Qt.LeftToolBarArea , toolbar)
