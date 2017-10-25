@@ -4,7 +4,7 @@ from PyQt5.QtGui import (QColor, QPainter, QPen, QPolygonF, QPalette, QIcon)
 from PyQt5.QtCore import (Qt, QPointF)
 from system.matrix.vector import (Vector2D, Vector3D)
 from system.matrix.transform import PerspectiveProjection
-from system.storage import InitMesh
+from system.file.storage import InitMesh
 
 from config.base import get_asset_dir
 from config.canvas import (get_axis_line_width, get_grid_line_width,
@@ -22,30 +22,47 @@ class Canvas(QWidget):
 
         self.tabs = QTabWidget()
         self.tabs.setTabsClosable(True)
+        self.tabs.setMovable(True)
         
-        self.newPaintArea()
-
         vbox.addWidget(self.tabs)
         self.setLayout(vbox)
         
         self.tabs.tabCloseRequested.connect(self.removeTab)
-
+        
     def removeTab(self, index):
-        self.tabs.removeTab(index)
-    
+        mainWin = self.parent().parent()        
+        mainWin.closeFile(index)
+        
     def newPaintArea(self, file_name=None):
         if file_name == None:
             file_name = 'temp'
-        paintArea = PaintArea()
+        paintArea = PaintArea(8,8,8)
         self.tabs.addTab(paintArea, file_name)
-
+        self.tabs.setCurrentWidget(paintArea)
+        return paintArea.grid_max, paintArea.mesh, self.tabs.currentIndex()
+    
+    def openPaintArea(self, grid_max , mesh, file_name):
+        paintArea = PaintArea(grid_max['x'], grid_max['y'], grid_max['z'], mesh=mesh)
+        self.tabs.addTab(paintArea, file_name)
+        self.tabs.setCurrentWidget(paintArea)
+        return self.tabs.currentIndex()
+    
+    def savePaintArea(self, file_name=None):
+        paintArea = self.tabs.currentWidget() 
+        if file_name == None:
+            # save old file without changing the file name
+            file_name = self.tabs.tabText(self.tabs.currentIndex())
+        else:            
+             self.tabs.setTabText(self.tabs.currentIndex(), file_name)  
+        return paintArea.grid_max, paintArea.mesh, file_name
+            
 class PaintArea(QWidget):
 
-    def __init__(self, x=8, y=8, z=8, parent=None):
-        super().__init__(parent)
-        self.initPaintArea(x, y, z)
+    def __init__(self, x=8, y=8, z=8, mesh=None, parent=None):
+        super().__init__(parent)        
+        self.initPaintArea(x, y, z, mesh)
 
-    def initPaintArea(self, x, y, z):
+    def initPaintArea(self, x, y, z, mesh):
 
         # Axis parameters
         self.axis_line_width = get_axis_line_width()
@@ -61,9 +78,10 @@ class PaintArea(QWidget):
         #======================================================================
         # Pixel storage
         #======================================================================
-
-        self.mesh = InitMesh(self.grid_min, self.grid_max)
-        
+        if mesh == None:
+            self.mesh = InitMesh(self.grid_min, self.grid_max)
+        else:
+            self.mesh = mesh
         #======================================================================
         # 3D perspective projection
         #======================================================================
@@ -125,13 +143,13 @@ class PaintArea(QWidget):
         #======================================================================
         # Draw test cells
         #======================================================================
-        self.mesh[0]['xy'][0,0] = (100,100,100,100)
-        self.mesh[0]['yz'][0,0] = (100,100,100,100)
-        self.mesh[0]['xz'][0,0] = (100,100,100,100)
-        
-        self.mesh[1]['xy'][0,0] = (255,000,000,100)
-        self.mesh[1]['yz'][0,0] = (000,255,000,100)
-        self.mesh[1]['xz'][0,0] = (000,000,255,100)
+#        self.mesh[0]['xy'][0,0] = (100,100,100,100)
+#        self.mesh[0]['yz'][0,0] = (100,100,100,100)
+#        self.mesh[0]['xz'][0,0] = (100,100,100,100)
+#        
+#        self.mesh[1]['xy'][0,0] = (255,000,000,100)
+#        self.mesh[1]['yz'][0,0] = (000,255,000,100)
+#        self.mesh[1]['xz'][0,0] = (000,000,255,100)
         
     def paintEvent(self, event):
         self.qPainter = QPainter()
@@ -141,8 +159,6 @@ class PaintArea(QWidget):
         self.origin = Vector2D(self.geometry().center().x(),
                           self.geometry().center().y()) + self.offset
         if self.showAxis:
-            self.axis_length = \
-            Vector2D(self.geometry().width(), self.geometry().height()).norm()
             self.drawAxis()            
         self.drawMesh()
         
@@ -351,7 +367,7 @@ class PaintArea(QWidget):
         # Zoom in/out when scroll upd/down
         #======================================================================
         if event.angleDelta().y() > 0:
-            self.grid_length *= 2
+            self.grid_length *= 1.5
         else:
-            self.grid_length /= 2
+            self.grid_length /= 1.5
         self.update()

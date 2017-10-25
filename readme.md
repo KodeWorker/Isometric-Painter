@@ -21,6 +21,7 @@ A Python-based painter for 2.5d isometric tiles.
 - 2017/09/30 - basic framework and code freeze
 - 2017/10/12 - basic 3D axis grid system
 - 2017/10/24 - code refined
+- 2017/10/25 - basic file system (not done)
 
 # Sources
 - http://simpleicon.com/

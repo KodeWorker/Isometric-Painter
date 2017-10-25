@@ -14,6 +14,7 @@ class BaseApplication(QMainWindow):
     def initUI(self):
         
         self.setWindowTitle('demo name')
+        self.setWindowIcon(QIcon(get_asset_dir('icon.png')))
         
         self.resize(self.windowWidth, self.windowHeight)
         center_point = QDesktopWidget().availableGeometry().center()
@@ -43,44 +44,55 @@ class BaseApplication(QMainWindow):
         # New
         newAct = QAction('New', self)
         newAct.setShortcut('Ctrl+N')
+        newAct.triggered.connect(self.newFile)
         
         # Open
         openAct = QAction('Open', self)
         openAct.setShortcut('Ctrl+O')
+        openAct.triggered.connect(self.openFile)
         
         # Open recent
         #======================================================================
-        openRecentMenu = QMenu('Open recent', self)
-        openRecentAct = QAction('Clear list', self)
-        
-        recentList = ['demo-1','demo-2']
-        for item in recentList:            
-            openRecentMenu.addAction(QAction('%s' %item, self))
-            
-        openRecentMenu.addSeparator()        
-        openRecentMenu.addAction(openRecentAct)
+#        openRecentMenu = QMenu('Open recent', self)
+#        openRecentAct = QAction('Clear list', self)
+#        
+#        recentList = ['demo-1','demo-2']
+#        for item in recentList:            
+#            openRecentMenu.addAction(QAction('%s' %item, self))
+#            
+#        openRecentMenu.addSeparator()        
+#        openRecentMenu.addAction(openRecentAct)
         #======================================================================
         
         # Save
         saveAct = QAction('Save', self)
         saveAct.setShortcut('Ctrl+S')
+        saveAct.triggered.connect(self.saveFile)
+        
+        # Save As
+        saveAsAct = QAction('Save as ...', self)
+        saveAsAct.setShortcut('Ctrl+Shift+S')
+        saveAsAct.triggered.connect(self.saveAsFile)
         
         # Save
         closeAct = QAction('Close', self)
+        closeAct.triggered.connect(self.closeFile)
         
         # Quit
         quitAct = QAction('Quit', self)
-        quitAct.setShortcut('Ctrl+Q')        
+        quitAct.setShortcut('Ctrl+Q')  
+        quitAct.triggered.connect(self.quitWin)
         
         #######################################################################
         
         # Menu Item Structure
         fileMenu.addAction(newAct)
-        fileMenu.addSeparator()
+#        fileMenu.addSeparator()
         fileMenu.addAction(openAct)
-        fileMenu.addMenu(openRecentMenu)
+#        fileMenu.addMenu(openRecentMenu)
         fileMenu.addSeparator()
         fileMenu.addAction(saveAct)
+        fileMenu.addAction(saveAsAct)
         fileMenu.addSeparator()
         fileMenu.addAction(closeAct)
         fileMenu.addSeparator()
@@ -133,3 +145,21 @@ class BaseApplication(QMainWindow):
     def initStatusbar(self):
         
         self.statusbar = self.statusBar()
+
+    def newFile(self):
+        pass
+    
+    def openFile(self):
+        pass
+    
+    def saveFile(self):
+        pass
+    
+    def saveAsFile(self):
+        pass
+    
+    def closeFile(self):
+        pass
+    
+    def quitWin(self):
+        pass
